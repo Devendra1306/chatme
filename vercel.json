@@ -2,7 +2,7 @@
   "version": 2,
   "builds": [
     {
-      "src": "supportgpt/backend/test_vercel_import.js",
+      "src": "supportgpt/backend/server.js",
       "use": "@vercel/node",
       "config": {
         "includeFiles": [
@@ -26,7 +26,7 @@
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "supportgpt/backend/test_vercel_import.js"
+      "dest": "supportgpt/backend/server.js"
     },
     {
       "src": "/assets/(.*)",
