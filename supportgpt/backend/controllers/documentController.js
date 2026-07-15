@@ -10,7 +10,9 @@ import { upsertVectors, deleteDocumentVectors } from '../services/pineconeServic
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const uploadsDir = path.join(__dirname, '..', 'uploads');
+const uploadsDir = process.env.VERCEL === '1'
+  ? '/tmp'
+  : path.join(__dirname, '..', 'uploads');
 
 /**
  * Process a document: extract → save to MongoDB chunks → embed → upsert to Pinecone → update status.
