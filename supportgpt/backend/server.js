@@ -150,15 +150,22 @@ app.use((err, req, res, next) => {
 
 // ─── Start Server ────────────────────────────────────────────────────────────
 const startServer = async () => {
-  // Try DB — don't block server start on failure
-  await connectDB();
-
-  app.listen(PORT, () => {
-    console.log(`🚀 ChatMe Backend running on port ${PORT}`);
-    console.log(`📡 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`🌐 CORS: http://localhost:5173`);
-    console.log(`🏥 Health: http://localhost:${PORT}/api/health`);
+  // Start DB connection asynchronously — do not await so we don't block Vercel serverless startup
+  connectDB().catch((err) => {
+    console.error('❌ DB connection error:', err.message);
   });
+
+  // Only call listen if we are not running on Vercel (serverless handles routing directly)
+  if (process.env.VERCEL !== '1') {
+    app.listen(PORT, () => {
+      console.log(`🚀 ChatMe Backend running on port ${PORT}`);
+      console.log(`📡 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`🌐 CORS: http://localhost:5173`);
+      console.log(`🏥 Health: http://localhost:${PORT}/api/health`);
+    });
+  } else {
+    console.log('📡 Vercel environment detected. Handler exported.');
+  }
 };
 
 startServer().catch((error) => {
