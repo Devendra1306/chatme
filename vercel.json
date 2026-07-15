@@ -6,12 +6,12 @@
       "use": "@vercel/node",
       "config": {
         "includeFiles": [
-          "supportgpt/backend/config/**",
-          "supportgpt/backend/models/**",
-          "supportgpt/backend/middleware/**",
-          "supportgpt/backend/services/**",
-          "supportgpt/backend/routes/**",
-          "supportgpt/backend/controllers/**"
+          "config/**",
+          "models/**",
+          "middleware/**",
+          "services/**",
+          "routes/**",
+          "controllers/**"
         ]
       }
     },
