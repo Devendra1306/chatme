@@ -1,7 +1,7 @@
-import Analytics from '../models/Analytics.js';
 import Message from '../models/Message.js';
 import Document from '../models/Document.js';
 import User from '../models/User.js';
+import Chat from '../models/Chat.js';
 
 // Helper to format date as "MMM DD" (e.g., "Jul 15")
 const formatDate = (dateObj) => {
@@ -12,51 +12,92 @@ const formatDate = (dateObj) => {
 // GET /api/analytics
 export const getAnalytics = async (req, res, next) => {
   try {
+    const isAdmin = req.user.role === 'admin';
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     thirtyDaysAgo.setHours(0, 0, 0, 0);
 
-    // 1. Get real daily stats from DB for the last 30 days
-    const dailyStats = await Analytics.find({
-      date: { $gte: thirtyDaysAgo },
-    }).lean();
+    // 1. Build queries based on role
+    const docQuery = isAdmin ? {} : { uploadedBy: req.user._id };
+    
+    let chatIds = [];
+    if (!isAdmin) {
+      const userChats = await Chat.find({ userId: req.user._id }).select('_id');
+      chatIds = userChats.map(c => c._id);
+    }
 
-    // Map stats by YYYY-MM-DD for fast lookup
-    const dailyMap = {};
-    dailyStats.forEach((stat) => {
-      if (stat.date) {
-        const dateStr = new Date(stat.date).toISOString().slice(0, 10);
-        dailyMap[dateStr] = stat;
-      }
-    });
+    const messageQuery = isAdmin
+      ? { role: 'user', createdAt: { $gte: thirtyDaysAgo } }
+      : { chatId: { $in: chatIds }, role: 'user', createdAt: { $gte: thirtyDaysAgo } };
 
-    // 2. Fetch overall real totals
-    const [totalQuestions, totalDocuments, totalUsers, statusBreakdown] = await Promise.all([
-      Message.countDocuments({ role: 'user' }),
-      Document.countDocuments(),
-      User.countDocuments(),
+    // 2. Fetch daily stats dynamically
+    const [msgAgg, docAgg, statusBreakdown, totalQuestions, totalDocuments, totalUsers] = await Promise.all([
+      Message.aggregate([
+        { $match: messageQuery },
+        {
+          $group: {
+            _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+            count: { $sum: 1 }
+          }
+        }
+      ]),
       Document.aggregate([
+        { $match: { ...docQuery, createdAt: { $gte: thirtyDaysAgo } } },
+        {
+          $group: {
+            _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+            count: { $sum: 1 }
+          }
+        }
+      ]),
+      Document.aggregate([
+        { $match: docQuery },
         { $group: { _id: '$status', count: { $sum: 1 } } }
-      ])
+      ]),
+      Message.countDocuments(isAdmin ? { role: 'user' } : { chatId: { $in: chatIds }, role: 'user' }),
+      Document.countDocuments(docQuery),
+      isAdmin ? User.countDocuments() : Promise.resolve(1)
     ]);
+
+    // Map aggregates by date key for O(1) lookup
+    const msgMap = {};
+    msgAgg.forEach(item => { msgMap[item._id] = item.count; });
+
+    const docMap = {};
+    docAgg.forEach(item => { docMap[item._id] = item.count; });
 
     // Format status breakdown
     const documentStatus = statusBreakdown.map((s) => ({
       status: s._id || 'unknown',
       count: s.count
     }));
-
     if (documentStatus.length === 0) {
       documentStatus.push({ status: 'ready', count: 0 });
     }
 
-    // 3. Construct 30-day timeline containing ONLY actual data (0 where no data exists)
+    // 3. Construct 30-day timeline containing actual user data
     const dailyQuestions = [];
     const dailyUploads = [];
     const userGrowth = [];
 
-    // Query users created before our 30-day window to initialize cumulative user growth
-    let cumulativeUsers = await User.countDocuments({ createdAt: { $lt: thirtyDaysAgo } });
+    let cumulativeUsers = isAdmin
+      ? await User.countDocuments({ createdAt: { $lt: thirtyDaysAgo } })
+      : 1;
+
+    // Get daily user registration stats if admin
+    let userAggMap = {};
+    if (isAdmin) {
+      const userAgg = await User.aggregate([
+        { $match: { createdAt: { $gte: thirtyDaysAgo } } },
+        {
+          $group: {
+            _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+            count: { $sum: 1 }
+          }
+        }
+      ]);
+      userAgg.forEach(item => { userAggMap[item._id] = item.count; });
+    }
 
     for (let i = 29; i >= 0; i--) {
       const d = new Date();
@@ -64,15 +105,16 @@ export const getAnalytics = async (req, res, next) => {
       d.setHours(0, 0, 0, 0);
       const dateKey = d.toISOString().slice(0, 10);
 
-      // Find real logged entry or fallback to 0 (no activity)
-      const dayData = dailyMap[dateKey] || { questions: 0, uploads: 0, users: 0 };
+      const qCount = msgMap[dateKey] || 0;
+      const uCount = docMap[dateKey] || 0;
       
-      // Update cumulative user count
-      cumulativeUsers += dayData.users;
+      if (isAdmin) {
+        cumulativeUsers += (userAggMap[dateKey] || 0);
+      }
 
       const dateLabel = formatDate(d);
-      dailyQuestions.push({ date: dateLabel, count: dayData.questions });
-      dailyUploads.push({ date: dateLabel, count: dayData.uploads });
+      dailyQuestions.push({ date: dateLabel, count: qCount });
+      dailyUploads.push({ date: dateLabel, count: uCount });
       userGrowth.push({ date: dateLabel, count: cumulativeUsers });
     }
 
@@ -83,7 +125,7 @@ export const getAnalytics = async (req, res, next) => {
         totalQuestions,
         totalDocuments,
         totalUsers,
-        avgResponseTime: totalQuestions > 0 ? 1.1 : 0, // 1.1s if questions exist
+        avgResponseTime: totalQuestions > 0 ? 1.1 : 0,
         questionChange: 0,
         documentChange: 0,
         userChange: 0
