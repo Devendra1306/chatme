@@ -1,0 +1,48 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "supportgpt/backend/server.js",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": [
+          "supportgpt/backend/config/**",
+          "supportgpt/backend/models/**",
+          "supportgpt/backend/middleware/**",
+          "supportgpt/backend/services/**",
+          "supportgpt/backend/routes/**",
+          "supportgpt/backend/controllers/**"
+        ]
+      }
+    },
+    {
+      "src": "supportgpt/frontend/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "supportgpt/backend/server.js"
+    },
+    {
+      "src": "/assets/(.*)",
+      "dest": "supportgpt/frontend/dist/assets/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "supportgpt/frontend/dist/$1",
+      "continue": true
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "supportgpt/frontend/dist/index.html"
+    }
+  ]
+}
