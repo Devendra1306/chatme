@@ -6,12 +6,12 @@
       "use": "@vercel/node",
       "config": {
         "includeFiles": [
-          "config/**",
-          "models/**",
-          "middleware/**",
-          "services/**",
-          "routes/**",
-          "controllers/**"
+          "supportgpt/backend/config/**",
+          "supportgpt/backend/models/**",
+          "supportgpt/backend/middleware/**",
+          "supportgpt/backend/services/**",
+          "supportgpt/backend/routes/**",
+          "supportgpt/backend/controllers/**"
         ]
       }
     },
@@ -30,11 +30,11 @@
     },
     {
       "src": "/assets/(.*)",
-      "dest": "supportgpt/frontend/assets/$1"
+      "dest": "/assets/$1"
     },
     {
       "src": "/(.*)",
-      "dest": "supportgpt/frontend/$1",
+      "dest": "/$1",
       "continue": true
     },
     {
@@ -42,7 +42,7 @@
     },
     {
       "src": "/(.*)",
-      "dest": "supportgpt/frontend/index.html"
+      "dest": "/index.html"
     }
   ]
 }
