@@ -1,7 +1,11 @@
 // Override system DNS — fixes MongoDB Atlas SRV lookup on restrictive ISPs/routers
 import dns from 'dns';
-dns.setDefaultResultOrder('ipv4first');
-dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1', '1.0.0.1']);
+try {
+  dns.setDefaultResultOrder('ipv4first');
+  dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1', '1.0.0.1']);
+} catch (err) {
+  console.warn('⚠️ Failed to configure DNS resolver:', err.message);
+}
 
 import 'dotenv/config';
 
