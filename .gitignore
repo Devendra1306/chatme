@@ -1,0 +1,24 @@
+# Node modules
+supportgpt/backend/node_modules/
+supportgpt/frontend/node_modules/
+
+# Local env files
+supportgpt/backend/.env
+
+# Build outputs
+supportgpt/frontend/dist/
+
+# PDF uploads
+supportgpt/backend/uploads/*
+!supportgpt/backend/uploads/.gitkeep
+
+# Temporary debug scripts
+supportgpt/backend/test_*.js
+supportgpt/backend/check_*.js
+supportgpt/backend/list_*.js
+supportgpt/backend/recreate_index.js
+
+# OS files
+.DS_Store
+Thumbs.db
+*.log
