@@ -126,6 +126,18 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
+// Middleware to ensure DB is connected before processing requests
+const ensureDbConnected = async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Database connection failed.', error: err.message });
+  }
+};
+
+app.use('/api', ensureDbConnected);
+
 // ─── API Routes ─────────────────────────────────────────────────────────────
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/documents', documentRoutes);

@@ -1,6 +1,20 @@
 import mongoose from 'mongoose';
 
 const connectDB = async (retries = 5, delay = 3000) => {
+  if (mongoose.connection.readyState === 1) return mongoose.connection;
+  if (mongoose.connection.readyState === 2) {
+    // Wait for the existing connection handshake to complete
+    await new Promise((resolve) => {
+      const timer = setInterval(() => {
+        if (mongoose.connection.readyState === 1) {
+          clearInterval(timer);
+          resolve();
+        }
+      }, 50);
+    });
+    return mongoose.connection;
+  }
+
   for (let i = 1; i <= retries; i++) {
     try {
       const conn = await mongoose.connect(process.env.MONGODB_URI, {
