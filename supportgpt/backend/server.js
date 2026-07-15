@@ -88,15 +88,42 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // ─── Static Files (uploads) ─────────────────────────────────────────────────
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+import mongoose from 'mongoose';
+import User from './models/User.js';
+
 // ─── Health Check ───────────────────────────────────────────────────────────
-app.get('/api/health', (req, res) => {
-  res.json({
-    success: true,
-    status: 'ok',
-    service: 'ChatMe Backend',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-  });
+app.get('/api/health', async (req, res) => {
+  try {
+    const dbUri = process.env.MONGODB_URI || 'not set';
+    const maskedUri = dbUri.replace(/:([^@]+)@/, ':***@');
+    
+    const mongooseState = mongoose.connection.readyState;
+    const mongooseStates = { 0: 'disconnected', 1: 'connected', 2: 'connecting', 3: 'disconnecting' };
+    
+    let userCount = 0;
+    let userEmails = [];
+    if (mongooseState === 1) {
+      const users = await User.find({});
+      userCount = users.length;
+      userEmails = users.map(u => u.email);
+    }
+
+    res.json({
+      success: true,
+      status: 'ok',
+      service: 'ChatMe Backend',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      database: {
+        uri: maskedUri,
+        connectionState: mongooseStates[mongooseState] || mongooseState,
+        userCount,
+        emails: userEmails
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 // ─── API Routes ─────────────────────────────────────────────────────────────
