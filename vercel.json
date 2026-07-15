@@ -30,11 +30,11 @@
     },
     {
       "src": "/assets/(.*)",
-      "dest": "supportgpt/frontend/dist/assets/$1"
+      "dest": "/assets/$1"
     },
     {
       "src": "/(.*)",
-      "dest": "supportgpt/frontend/dist/$1",
+      "dest": "/$1",
       "continue": true
     },
     {
@@ -42,7 +42,7 @@
     },
     {
       "src": "/(.*)",
-      "dest": "supportgpt/frontend/dist/index.html"
+      "dest": "/index.html"
     }
   ]
 }
