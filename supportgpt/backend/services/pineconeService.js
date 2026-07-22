@@ -35,20 +35,29 @@ export const upsertVectors = async (documentId, chunks, embeddings, documentName
 };
 
 /**
- * Query Pinecone for top-K most similar vectors.
+ * Query Pinecone for top-K most similar vectors, optionally filtered by document IDs.
  * @param {number[]} queryEmbedding
  * @param {number} topK
+ * @param {string[]} documentIds
  * @returns {Promise<Array>}
  */
-export const queryVectors = async (queryEmbedding, topK = 5) => {
+export const queryVectors = async (queryEmbedding, topK = 5, documentIds = []) => {
   const index = getPineconeIndex();
 
-  const result = await index.namespace(NAMESPACE).query({
+  const queryOptions = {
     vector: queryEmbedding,
     topK,
     includeMetadata: true,
     includeValues: false,
-  });
+  };
+
+  if (documentIds && documentIds.length > 0) {
+    queryOptions.filter = {
+      documentId: { $in: documentIds.map(id => id.toString()) }
+    };
+  }
+
+  const result = await index.namespace(NAMESPACE).query(queryOptions);
 
   return result.matches || [];
 };

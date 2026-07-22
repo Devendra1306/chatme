@@ -2,6 +2,7 @@ import { embedText } from './embeddingService.js';
 import { queryVectors } from './pineconeService.js';
 import { getModel } from '../config/gemini.js';
 import Chunk from '../models/Chunk.js';
+import Document from '../models/Document.js';
 import axios from 'axios';
 
 const SYSTEM_PROMPT = `You are an AI Customer Support Assistant. Your job is to help users by answering questions strictly based on the provided document context below.
@@ -56,43 +57,58 @@ const extractSources = (matches) => {
 /**
  * Full RAG pipeline: embed query → search Pinecone → build context → call LLM.
  * @param {string} query - User's question
+ * @param {string} userId - Current user's ID
+ * @param {string} userRole - Current user's role
  * @returns {Promise<{ answer: string, sources: Array<{documentName, page, confidence}> }>}
  */
-export const chat = async (query) => {
-  // Step 1: Embed the user's query
-  const queryEmbedding = await embedText(query);
+export const chat = async (query, userId, userRole) => {
+  // Step 1: Resolve the user's specific documents to filter context
+  const isAdmin = userRole === 'admin';
+  const docQuery = isAdmin ? {} : { uploadedBy: userId };
+  const userDocs = await Document.find(docQuery).select('_id').lean();
+  const docIds = userDocs.map((d) => d._id.toString());
 
-  // Step 2: Search Pinecone for relevant chunks
-  const matches = await queryVectors(queryEmbedding, 5);
+  let matches = [];
+  let context = '';
+  let sources = [];
 
-  // Step 3: Build context from top matches
-  let context = buildContext(matches);
-  let sources = extractSources(matches);
+  if (docIds.length > 0) {
+    // Step 2: Embed the user's query
+    const queryEmbedding = await embedText(query);
 
-  // Step 4: Fallback to MongoDB text search if Pinecone yields no relevant results
-  if (!context || context.trim() === '') {
-    console.log(`🔍 No matches in Pinecone for "${query}". Falling back to MongoDB text search...`);
-    try {
-      // Find matches in MongoDB text index
-      const mongoMatches = await Chunk.find({
-        $text: { $search: query }
-      }).limit(5).lean();
+    // Step 3: Search Pinecone for relevant chunks, filtered by the user's documents
+    matches = await queryVectors(queryEmbedding, 5, docIds);
 
-      if (mongoMatches && mongoMatches.length > 0) {
-        console.log(`✅ Found ${mongoMatches.length} matching chunks in MongoDB`);
-        context = mongoMatches
-          .map((m, i) => `[Context ${i + 1}] Document: "${m.documentName || 'Unknown'}", Page: ${m.pageApprox || 'N/A'}\n${m.text || ''}`)
-          .join('\n\n---\n\n');
+    // Step 4: Build context from top matches
+    context = buildContext(matches);
+    sources = extractSources(matches);
 
-        // Extract sources
-        sources = mongoMatches.map((m) => ({
-          documentName: m.documentName || 'Unknown',
-          page: m.pageApprox || 0,
-          confidence: 0.95, // High confidence for text match
-        }));
+    // Step 5: Fallback to MongoDB text search if Pinecone yields no relevant results
+    if (!context || context.trim() === '') {
+      console.log(`🔍 No matches in Pinecone for "${query}". Falling back to MongoDB text search...`);
+      try {
+        // Find matches in MongoDB text index, restricted to the user's documents
+        const mongoMatches = await Chunk.find({
+          documentId: { $in: docIds },
+          $text: { $search: query }
+        }).limit(5).lean();
+
+        if (mongoMatches && mongoMatches.length > 0) {
+          console.log(`✅ Found ${mongoMatches.length} matching chunks in MongoDB`);
+          context = mongoMatches
+            .map((m, i) => `[Context ${i + 1}] Document: "${m.documentName || 'Unknown'}", Page: ${m.pageApprox || 'N/A'}\n${m.text || ''}`)
+            .join('\n\n---\n\n');
+
+          // Extract sources
+          sources = mongoMatches.map((m) => ({
+            documentName: m.documentName || 'Unknown',
+            page: m.pageApprox || 0,
+            confidence: 0.95, // High confidence for text match
+          }));
+        }
+      } catch (mongoErr) {
+        console.error('❌ MongoDB text search fallback error:', mongoErr.message);
       }
-    } catch (mongoErr) {
-      console.error('❌ MongoDB text search fallback error:', mongoErr.message);
     }
   }
 

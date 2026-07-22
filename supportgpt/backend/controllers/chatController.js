@@ -84,7 +84,7 @@ export const sendMessage = async (req, res, next) => {
     let sources = [];
 
     try {
-      const ragResult = await ragChat(content.trim());
+      const ragResult = await ragChat(content.trim(), req.user._id, req.user.role);
       answer = ragResult.answer;
       sources = ragResult.sources;
     } catch (ragError) {
