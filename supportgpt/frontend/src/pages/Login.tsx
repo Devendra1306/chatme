@@ -4,6 +4,8 @@ import { useAuth } from '../contexts/AuthContext'
 import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
 import { RiRobot2Line, RiMailLine, RiLockPasswordLine, RiEyeLine, RiEyeOffLine, RiErrorWarningLine } from 'react-icons/ri'
+import AtmosphereBackground from '../components/AtmosphereBackground'
+import CursorGlow from '../components/CursorGlow'
 
 export default function Login() {
   const { login } = useAuth()
@@ -65,57 +67,36 @@ export default function Login() {
   }
 
   return (
-    <div className="relative min-h-screen bg-slate-950 flex items-center justify-center p-4 overflow-hidden">
-      {/* Dynamic Animated Background Blobs */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <motion.div
-          animate={{
-            scale: [1, 1.2, 1],
-            x: [0, 50, 0],
-            y: [0, -30, 0],
-          }}
-          transition={{
-            duration: 10,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
-          className="absolute -top-40 -right-40 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl"
-        />
-        <motion.div
-          animate={{
-            scale: [1, 1.3, 1],
-            x: [0, -40, 0],
-            y: [0, 40, 0],
-          }}
-          transition={{
-            duration: 12,
-            repeat: Infinity,
-            ease: "easeInOut",
-            delay: 2
-          }}
-          className="absolute -bottom-40 -left-40 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"
-        />
-      </div>
-
-      <div className="relative w-full max-w-md z-10">
+    <div style={{ position: 'relative', minHeight: '100vh', background: 'var(--bg-base)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, overflow: 'hidden' }}>
+      <AtmosphereBackground opacity={0.9} />
+      <CursorGlow />
+      {/* Form container */}
+      <div style={{ position: 'relative', width: '100%', maxWidth: 420, zIndex: 10 }}>
         {/* Animated Brand Logo Header */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="text-center mb-8"
+          style={{ textAlign: 'center', marginBottom: 32 }}
         >
-          <motion.div 
+          <motion.div
             whileHover={{ scale: 1.08 }}
             whileTap={{ scale: 0.95 }}
-            className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-tr from-emerald-500 to-teal-400 rounded-2xl mb-4 shadow-xl shadow-emerald-500/25 cursor-pointer"
+            animate={{ boxShadow: ['0 0 16px rgba(99,102,241,0.5)', '0 0 32px rgba(99,102,241,0.8)', '0 0 16px rgba(99,102,241,0.5)'] }}
+            transition={{ duration: 2.5, repeat: Infinity }}
+            style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              width: 60, height: 60, borderRadius: 16, marginBottom: 16,
+              background: 'linear-gradient(135deg, #6366f1, #818cf8)',
+              cursor: 'pointer',
+            }}
           >
-            <RiRobot2Line className="text-white text-3xl" />
+            <RiRobot2Line style={{ color: '#fff', fontSize: 28 }} />
           </motion.div>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-100 to-slate-300">
+          <h1 className="shimmer-text" style={{ fontSize: 28, fontWeight: 800, marginBottom: 4 }}>
             ChatMe
           </h1>
-          <p className="text-slate-400 mt-1 text-sm font-medium">AI-Powered Customer Support</p>
+          <p style={{ color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500 }}>AI-Powered Customer Support</p>
         </motion.div>
 
         {/* Glassmorphic Form Card */}
@@ -123,11 +104,19 @@ export default function Login() {
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5, delay: 0.1 }}
-          className="backdrop-blur-xl bg-slate-900/60 border border-slate-800/80 rounded-3xl shadow-2xl p-8"
+          style={{
+            background: 'rgba(13,13,26,0.80)',
+            backdropFilter: 'blur(24px)',
+            WebkitBackdropFilter: 'blur(24px)',
+            border: '1px solid rgba(99,102,241,0.20)',
+            borderRadius: 20,
+            padding: 32,
+            boxShadow: '0 0 0 1px rgba(99,102,241,0.10), 0 8px 40px rgba(0,0,0,0.40), 0 0 80px rgba(99,102,241,0.10)',
+          }}
         >
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold text-white mb-1">Welcome Back</h2>
-            <p className="text-slate-400 text-sm">Sign in to your workspace to continue</p>
+          <div style={{ marginBottom: 24 }}>
+            <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 4 }}>Welcome Back</h2>
+            <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>Sign in to your workspace to continue</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">

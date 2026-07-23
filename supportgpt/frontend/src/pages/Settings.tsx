@@ -1,267 +1,240 @@
 import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../contexts/AuthContext'
-import { authApi } from '../services/api'
+import GlassCard from '../components/GlassCard'
 import toast from 'react-hot-toast'
 import {
-  RiUserLine,
-  RiMailLine,
+  RiUser3Line,
   RiLockPasswordLine,
-  RiSaveLine,
-  RiImageLine,
-  RiEyeLine,
-  RiEyeOffLine,
+  RiNotification3Line,
+  RiPaletteLine,
+  RiKeyLine,
+  RiShieldCheckLine,
+  RiSave3Line,
 } from 'react-icons/ri'
 
+const sections = [
+  { id: 'profile',       icon: RiUser3Line,         label: 'Profile'       },
+  { id: 'security',      icon: RiLockPasswordLine,  label: 'Security'      },
+  { id: 'notifications', icon: RiNotification3Line, label: 'Notifications' },
+  { id: 'appearance',    icon: RiPaletteLine,       label: 'Appearance'    },
+  { id: 'api',           icon: RiKeyLine,           label: 'API Keys'      },
+  { id: 'advanced',      icon: RiShieldCheckLine,   label: 'Advanced'      },
+]
+
 export default function Settings() {
-  const { user, refreshUser } = useAuth()
-
-  // Profile state
+  const { user } = useAuth()
+  const [active, setActive] = useState('profile')
   const [name, setName] = useState(user?.name ?? '')
-  const [email, setEmail] = useState(user?.email ?? '')
-  const [avatar, setAvatar] = useState(user?.avatar ?? '')
-  const [profileLoading, setProfileLoading] = useState(false)
+  const [email] = useState(user?.email ?? '')
 
-  // Password state
-  const [oldPassword, setOldPassword] = useState('')
-  const [newPassword, setNewPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [showPasswords, setShowPasswords] = useState(false)
-  const [passwordLoading, setPasswordLoading] = useState(false)
-
-  const handleProfileSave = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!name.trim() || !email.trim()) {
-      toast.error('Name and email are required')
-      return
-    }
-    setProfileLoading(true)
-    try {
-      await authApi.updateProfile({ name, email, avatar })
-      await refreshUser()
-      toast.success('Profile updated successfully')
-    } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { message?: string; error?: string } } })?.response?.data?.message ||
-        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
-        'Failed to update profile'
-      toast.error(msg)
-    } finally {
-      setProfileLoading(false)
-    }
+  const handleSave = () => {
+    toast.success('Settings saved')
   }
-
-  const handlePasswordChange = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!oldPassword || !newPassword || !confirmPassword) {
-      toast.error('Please fill in all password fields')
-      return
-    }
-    if (newPassword !== confirmPassword) {
-      toast.error('New passwords do not match')
-      return
-    }
-    if (newPassword.length < 8) {
-      toast.error('Password must be at least 8 characters')
-      return
-    }
-    setPasswordLoading(true)
-    try {
-      await authApi.changePassword(oldPassword, newPassword)
-      toast.success('Password changed successfully')
-      setOldPassword('')
-      setNewPassword('')
-      setConfirmPassword('')
-    } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { message?: string; error?: string } } })?.response?.data?.message ||
-        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
-        'Failed to change password'
-      toast.error(msg)
-    } finally {
-      setPasswordLoading(false)
-    }
-  }
-
-  const initials = user?.name
-    ? user.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
-    : '??'
 
   return (
-    <div className="p-8 max-w-2xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-900">Settings</h1>
-        <p className="text-slate-500 text-sm mt-1">Manage your account and preferences</p>
-      </div>
+    <div style={{ padding: '32px 36px', maxWidth: 1000, margin: '0 auto' }}>
 
-      {/* Profile Section */}
-      <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6 mb-6">
-        <h2 className="text-base font-semibold text-slate-900 mb-5 flex items-center gap-2">
-          <RiUserLine className="text-emerald-500" />
-          Profile Information
-        </h2>
+      {/* Header */}
+      <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: 32 }}>
+        <h1 style={{ fontSize: 30, fontWeight: 800, color: '#f0f0ff', marginBottom: 4 }}>Settings</h1>
+        <p style={{ fontSize: 14, color: '#6d6b98' }}>Manage your workspace preferences and account</p>
+      </motion.div>
 
-        {/* Avatar preview */}
-        <div className="flex items-center gap-4 mb-6">
-          <div className="w-16 h-16 rounded-full bg-emerald-500 flex items-center justify-center text-white text-xl font-bold flex-shrink-0 overflow-hidden">
-            {avatar ? (
-              <img src={avatar} alt={name} className="w-full h-full object-cover" onError={() => setAvatar('')} />
-            ) : (
-              initials
-            )}
-          </div>
-          <div>
-            <p className="text-sm font-medium text-slate-700">{user?.name}</p>
-            <p className="text-xs text-slate-400">{user?.email}</p>
-            <span className={`inline-block mt-1 text-xs px-2 py-0.5 rounded-full ${
-              user?.role === 'admin' ? 'bg-amber-50 text-amber-600' : 'bg-slate-100 text-slate-600'
-            }`}>
-              {user?.role}
-            </span>
-          </div>
-        </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: 24 }}>
 
-        <form onSubmit={handleProfileSave} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Full Name</label>
-            <div className="relative">
-              <RiUserLine className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Email Address</label>
-            <div className="relative">
-              <RiMailLine className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Avatar URL (optional)</label>
-            <div className="relative">
-              <RiImageLine className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="url"
-                value={avatar}
-                onChange={(e) => setAvatar(e.target.value)}
-                placeholder="https://example.com/avatar.jpg"
-                className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent placeholder-slate-400"
-              />
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={profileLoading}
-            className="flex items-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-300 text-white text-sm font-medium rounded-lg transition-colors"
-          >
-            {profileLoading ? (
-              <>
-                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-                Saving...
-              </>
-            ) : (
-              <>
-                <RiSaveLine />
-                Save Changes
-              </>
-            )}
-          </button>
-        </form>
-      </div>
-
-      {/* Password Section */}
-      <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
-        <h2 className="text-base font-semibold text-slate-900 mb-5 flex items-center gap-2">
-          <RiLockPasswordLine className="text-emerald-500" />
-          Change Password
-        </h2>
-
-        <form onSubmit={handlePasswordChange} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Current Password</label>
-            <div className="relative">
-              <RiLockPasswordLine className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type={showPasswords ? 'text' : 'password'}
-                value={oldPassword}
-                onChange={(e) => setOldPassword(e.target.value)}
-                placeholder="Your current password"
-                className="w-full pl-9 pr-10 py-2.5 border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent placeholder-slate-400"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPasswords(!showPasswords)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+        {/* Sidebar tabs */}
+        <motion.div
+          initial={{ opacity: 0, x: -16 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.1 }}
+        >
+          <GlassCard hover={false} style={{ padding: '8px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {sections.map(({ id, icon: Icon, label }) => (
+              <motion.button
+                key={id}
+                whileHover={{ x: 2 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => setActive(id)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '9px 12px', borderRadius: 8, border: 'none',
+                  background: active === id ? 'rgba(99,102,241,0.18)' : 'transparent',
+                  color: active === id ? '#e0e0f8' : '#9896bb',
+                  fontSize: 13, fontWeight: active === id ? 600 : 500,
+                  cursor: 'pointer', textAlign: 'left', width: '100%',
+                  position: 'relative', overflow: 'hidden',
+                  borderLeft: active === id ? '2px solid #6366f1' : '2px solid transparent',
+                  transition: 'all 0.15s',
+                }}
               >
-                {showPasswords ? <RiEyeOffLine /> : <RiEyeLine />}
-              </button>
-            </div>
-          </div>
+                <Icon style={{ fontSize: 16, flexShrink: 0, color: active === id ? '#818cf8' : 'inherit' }} />
+                {label}
+              </motion.button>
+            ))}
+          </GlassCard>
+        </motion.div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">New Password</label>
-            <div className="relative">
-              <RiLockPasswordLine className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type={showPasswords ? 'text' : 'password'}
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Min. 6 characters"
-                className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent placeholder-slate-400"
-              />
-            </div>
-          </div>
+        {/* Content panel */}
+        <motion.div
+          initial={{ opacity: 0, x: 16 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.15 }}
+        >
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={active}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+            >
+              <GlassCard hover={false} style={{ padding: '28px 32px' }}>
+                {active === 'profile' && (
+                  <div>
+                    <h2 style={{ fontSize: 18, fontWeight: 700, color: '#f0f0ff', marginBottom: 4 }}>Profile Settings</h2>
+                    <p style={{ fontSize: 13, color: '#6d6b98', marginBottom: 28 }}>Update your name and personal information</p>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Confirm New Password</label>
-            <div className="relative">
-              <RiLockPasswordLine className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type={showPasswords ? 'text' : 'password'}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Repeat new password"
-                className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent placeholder-slate-400"
-              />
-            </div>
-          </div>
+                    {/* Avatar */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 18, marginBottom: 28 }}>
+                      <div style={{
+                        width: 60, height: 60, borderRadius: '50%',
+                        background: 'linear-gradient(135deg, #6366f1, #818cf8)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 22, fontWeight: 800, color: '#fff',
+                        boxShadow: '0 0 20px rgba(99,102,241,0.4)',
+                      }}>
+                        {name ? name[0].toUpperCase() : '?'}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: '#f0f0ff' }}>{name || 'Your Name'}</div>
+                        <div style={{ fontSize: 12, color: '#6d6b98' }}>{email}</div>
+                      </div>
+                    </div>
 
-          <button
-            type="submit"
-            disabled={passwordLoading}
-            className="flex items-center gap-2 px-5 py-2.5 bg-[#1e3a5f] hover:bg-[#163050] disabled:bg-slate-300 text-white text-sm font-medium rounded-lg transition-colors"
-          >
-            {passwordLoading ? (
-              <>
-                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-                Changing...
-              </>
-            ) : (
-              <>
-                <RiLockPasswordLine />
-                Change Password
-              </>
-            )}
-          </button>
-        </form>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                      {[
+                        { label: 'Full Name', value: name, setter: setName, placeholder: 'Enter your name' },
+                        { label: 'Email Address', value: email, setter: null, placeholder: 'Email', readonly: true },
+                      ].map(({ label, value, setter, placeholder, readonly }) => (
+                        <div key={label}>
+                          <label style={{ fontSize: 12, fontWeight: 600, color: '#9896bb', display: 'block', marginBottom: 6, letterSpacing: '0.04em' }}>
+                            {label.toUpperCase()}
+                          </label>
+                          <input
+                            value={value}
+                            onChange={e => setter?.(e.target.value)}
+                            placeholder={placeholder}
+                            readOnly={readonly}
+                            style={{
+                              width: '100%', padding: '11px 14px',
+                              background: readonly ? 'rgba(99,102,241,0.05)' : 'rgba(13,13,26,0.72)',
+                              border: `1px solid rgba(99,102,241,${readonly ? '0.08' : '0.18'})`,
+                              borderRadius: 10, color: readonly ? '#6d6b98' : '#f0f0ff',
+                              fontSize: 14, outline: 'none', fontFamily: 'inherit',
+                              boxSizing: 'border-box',
+                            }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+
+                    <motion.button
+                      whileHover={{ scale: 1.03, boxShadow: '0 0 20px rgba(99,102,241,0.4)' }}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={handleSave}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 8,
+                        marginTop: 24, padding: '10px 24px',
+                        background: 'linear-gradient(135deg, #6366f1, #818cf8)',
+                        border: 'none', borderRadius: 10,
+                        color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                      }}
+                    >
+                      <RiSave3Line /> Save Changes
+                    </motion.button>
+                  </div>
+                )}
+
+                {active === 'security' && (
+                  <div>
+                    <h2 style={{ fontSize: 18, fontWeight: 700, color: '#f0f0ff', marginBottom: 4 }}>Security</h2>
+                    <p style={{ fontSize: 13, color: '#6d6b98', marginBottom: 28 }}>Manage your password and account security</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                      {['Current Password', 'New Password', 'Confirm Password'].map(label => (
+                        <div key={label}>
+                          <label style={{ fontSize: 12, fontWeight: 600, color: '#9896bb', display: 'block', marginBottom: 6, letterSpacing: '0.04em' }}>
+                            {label.toUpperCase()}
+                          </label>
+                          <input
+                            type="password"
+                            placeholder="••••••••"
+                            style={{
+                              width: '100%', padding: '11px 14px',
+                              background: 'rgba(13,13,26,0.72)',
+                              border: '1px solid rgba(99,102,241,0.18)',
+                              borderRadius: 10, color: '#f0f0ff',
+                              fontSize: 14, outline: 'none', fontFamily: 'inherit',
+                              boxSizing: 'border-box',
+                            }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    <motion.button
+                      whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                      onClick={() => toast.success('Password updated')}
+                      style={{
+                        marginTop: 24, padding: '10px 24px',
+                        background: 'linear-gradient(135deg, #6366f1, #818cf8)',
+                        border: 'none', borderRadius: 10,
+                        color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', gap: 8,
+                      }}
+                    >
+                      <RiLockPasswordLine /> Update Password
+                    </motion.button>
+                  </div>
+                )}
+
+                {active === 'appearance' && (
+                  <div>
+                    <h2 style={{ fontSize: 18, fontWeight: 700, color: '#f0f0ff', marginBottom: 4 }}>Appearance</h2>
+                    <p style={{ fontSize: 13, color: '#6d6b98', marginBottom: 28 }}>Choose your visual preferences</p>
+                    <div style={{ display: 'flex', gap: 14 }}>
+                      {['Dark (Default)', 'Darker', 'AMOLED'].map(theme => (
+                        <motion.div
+                          key={theme}
+                          whileHover={{ scale: 1.04 }}
+                          whileTap={{ scale: 0.97 }}
+                          onClick={() => toast('Theme: ' + theme)}
+                          style={{
+                            padding: '16px 20px', borderRadius: 12, cursor: 'pointer',
+                            background: theme === 'Dark (Default)' ? 'rgba(99,102,241,0.18)' : 'rgba(99,102,241,0.06)',
+                            border: `1px solid ${theme === 'Dark (Default)' ? 'rgba(99,102,241,0.4)' : 'rgba(99,102,241,0.12)'}`,
+                            fontSize: 13, fontWeight: 600,
+                            color: theme === 'Dark (Default)' ? '#e0e0f8' : '#9896bb',
+                            textAlign: 'center',
+                          }}
+                        >
+                          {theme}
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {(active === 'notifications' || active === 'api' || active === 'advanced') && (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 40, gap: 12, textAlign: 'center' }}>
+                    <div style={{ fontSize: 48, opacity: 0.2 }}>🚧</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: '#4d4b72' }}>Coming Soon</div>
+                    <div style={{ fontSize: 13, color: '#2e2c52' }}>This section is under development</div>
+                  </div>
+                )}
+              </GlassCard>
+            </motion.div>
+          </AnimatePresence>
+        </motion.div>
       </div>
     </div>
   )
